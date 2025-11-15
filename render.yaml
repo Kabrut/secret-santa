@@ -19,7 +19,6 @@ services:
   - type: web
     name: secret-santa-frontend
     env: static
-    plan: free
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: ./frontend/build
     envVars:
