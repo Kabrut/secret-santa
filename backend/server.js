@@ -169,84 +169,51 @@ app.post('/api/draw', (req, res) => {
         return res.status(400).json({ error: 'Not a valid participant' });
       }
 
-      // Check if assignments exist
-      drawsDb.findOne({}, (err, anyDraw) => {
+      // Get all existing draws to determine who's already been assigned
+      drawsDb.find({}, (err, existingDraws) => {
         if (err) {
           return res.status(500).json({ error: 'Database error' });
         }
 
-        // If no draws exist at all, generate ALL assignments and save them
-        if (!anyDraw) {
-          try {
-            const assignments = generateAssignments(config.participants);
-            
-            // Create all draw records at once
-            const allDraws = config.participants.map(participant => ({
-              giver: participant,
-              receiver: assignments[participant],
-              drawnAt: new Date(),
-              revealed: false
-            }));
+        // Get list of people who have already received gifts
+        const alreadyReceivers = existingDraws.map(draw => draw.receiver);
+        
+        // Get list of available people to receive (excluding self and already assigned)
+        const availableReceivers = config.participants.filter(
+          participant => participant !== name && !alreadyReceivers.includes(participant)
+        );
 
-            // Save all assignments to database
-            drawsDb.insert(allDraws, (err) => {
-              if (err) {
-                return res.status(500).json({ error: 'Failed to save assignments' });
-              }
-
-              // Mark this person's draw as revealed
-              drawsDb.update(
-                { giver: name },
-                { $set: { revealed: true, revealedAt: new Date() } },
-                {},
-                (err) => {
-                  if (err) {
-                    console.error('Failed to mark as revealed:', err);
-                  }
-
-                  res.json({
-                    alreadyDrawn: false,
-                    receiver: assignments[name],
-                    maxPrice: config.maxPrice
-                  });
-                }
-              );
-            });
-          } catch (error) {
-            return res.status(500).json({ error: 'Failed to generate assignments' });
+        // If no one available, something went wrong
+        if (availableReceivers.length === 0) {
+          // Check if everyone has drawn
+          if (existingDraws.length >= config.participants.length) {
+            return res.status(400).json({ error: 'All participants have already been assigned' });
           }
-        } else {
-          // Assignments already exist, find this person's draw
-          drawsDb.findOne({ giver: name }, (err, draw) => {
-            if (err) {
-              return res.status(500).json({ error: 'Database error' });
-            }
-
-            if (!draw) {
-              return res.status(400).json({ error: 'Assignment not found for this participant' });
-            }
-
-            // Mark as revealed if not already
-            if (!draw.revealed) {
-              drawsDb.update(
-                { giver: name },
-                { $set: { revealed: true, revealedAt: new Date() } },
-                {},
-                (err) => {
-                  if (err) {
-                    console.error('Failed to mark as revealed:', err);
-                  }
-                }
-              );
-            }
-
-            res.json({
-              alreadyDrawn: draw.revealed,
-              receiver: draw.receiver,
-              maxPrice: config.maxPrice
-            });
-          });
+          return res.status(400).json({ error: 'No available participants to draw' });
         }
+
+        // Randomly select from available receivers
+        const randomIndex = Math.floor(Math.random() * availableReceivers.length);
+        const receiver = availableReceivers[randomIndex];
+
+        // Save this draw
+        const draw = {
+          giver: name,
+          receiver: receiver,
+          drawnAt: new Date()
+        };
+
+        drawsDb.insert(draw, (err) => {
+          if (err) {
+            return res.status(500).json({ error: 'Failed to save draw' });
+          }
+
+          res.json({
+            alreadyDrawn: false,
+            receiver: receiver,
+            maxPrice: config.maxPrice
+          });
+        });
       });
     });
   });
