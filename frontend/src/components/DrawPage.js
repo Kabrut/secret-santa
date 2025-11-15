@@ -83,7 +83,7 @@ function DrawPage({ config, apiUrl }) {
   return (
     <div className="bg-white rounded-2xl shadow-2xl p-8">
       <h2 className="text-3xl font-bold text-christmas-red mb-6 text-center">
-        Wylosuj Osobę
+        🎁 Secret Santa
       </h2>
 
       {!result ? (

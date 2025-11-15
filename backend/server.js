@@ -257,6 +257,28 @@ app.get('/api/draw/:participantName', (req, res) => {
   });
 });
 
+// Get all draws (for admin panel and public results)
+app.get('/api/draws', (req, res) => {
+  drawsDb.find({}, (err, draws) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    configDb.findOne({}, (err, config) => {
+      if (err || !config) {
+        return res.status(500).json({ error: 'Configuration not found' });
+      }
+
+      res.json({
+        draws: draws,
+        maxPrice: config.maxPrice,
+        totalParticipants: config.participants.length,
+        completedDraws: draws.length
+      });
+    });
+  });
+});
+
 // Reset all data (admin only)
 app.post('/api/reset', (req, res) => {
   drawsDb.remove({}, { multi: true }, (err) => {
