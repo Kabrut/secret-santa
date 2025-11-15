@@ -14,16 +14,11 @@ services:
         value: 5000
       - key: FRONTEND_URL
         sync: false
-    disk:
-      name: secret-santa-data
-      mountPath: /opt/render/project/src/backend/data
-      sizeGB: 1
 
   # Frontend Service
   - type: web
     name: secret-santa-frontend
     env: static
-    region: frankfurt
     plan: free
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: ./frontend/build
