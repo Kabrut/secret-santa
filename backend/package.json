@@ -4,7 +4,7 @@
   "description": "Backend for Secret Santa gift exchange application",
   "main": "server.js",
   "engines": {
-    "node": ">=14.0.0"
+    "node": "18.x"
   },
   "scripts": {
     "start": "node server.js",
