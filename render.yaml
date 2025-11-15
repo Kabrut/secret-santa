@@ -19,7 +19,7 @@ services:
   - type: web
     name: secret-santa-frontend
     env: static
-    buildCommand: cd frontend && npm install && npm run build
+    buildCommand: cd frontend && npm install && CI=false npm run build
     staticPublishPath: ./frontend/build
     envVars:
       - key: REACT_APP_API_URL
