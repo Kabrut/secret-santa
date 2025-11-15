@@ -169,62 +169,84 @@ app.post('/api/draw', (req, res) => {
         return res.status(400).json({ error: 'Not a valid participant' });
       }
 
-      // Check if all assignments have been made
-      drawsDb.find({}, (err, existingDraws) => {
+      // Check if assignments exist
+      drawsDb.findOne({}, (err, anyDraw) => {
         if (err) {
           return res.status(500).json({ error: 'Database error' });
         }
 
-        let assignments;
-
-        // If no draws exist, generate all assignments
-        if (existingDraws.length === 0) {
+        // If no draws exist at all, generate ALL assignments and save them
+        if (!anyDraw) {
           try {
-            assignments = generateAssignments(config.participants);
+            const assignments = generateAssignments(config.participants);
+            
+            // Create all draw records at once
+            const allDraws = config.participants.map(participant => ({
+              giver: participant,
+              receiver: assignments[participant],
+              drawnAt: new Date(),
+              revealed: false
+            }));
+
+            // Save all assignments to database
+            drawsDb.insert(allDraws, (err) => {
+              if (err) {
+                return res.status(500).json({ error: 'Failed to save assignments' });
+              }
+
+              // Mark this person's draw as revealed
+              drawsDb.update(
+                { giver: name },
+                { $set: { revealed: true, revealedAt: new Date() } },
+                {},
+                (err) => {
+                  if (err) {
+                    console.error('Failed to mark as revealed:', err);
+                  }
+
+                  res.json({
+                    alreadyDrawn: false,
+                    receiver: assignments[name],
+                    maxPrice: config.maxPrice
+                  });
+                }
+              );
+            });
           } catch (error) {
             return res.status(500).json({ error: 'Failed to generate assignments' });
           }
         } else {
-          // Reconstruct assignments from existing draws
-          assignments = {};
-          existingDraws.forEach(draw => {
-            assignments[draw.giver] = draw.receiver;
-          });
-
-          // If this person's assignment doesn't exist, something is wrong
-          if (!assignments[name]) {
-            try {
-              // Regenerate all assignments
-              assignments = generateAssignments(config.participants);
-              // Clear old draws
-              drawsDb.remove({}, { multi: true });
-              existingDraws = [];
-            } catch (error) {
-              return res.status(500).json({ error: 'Failed to generate assignments' });
+          // Assignments already exist, find this person's draw
+          drawsDb.findOne({ giver: name }, (err, draw) => {
+            if (err) {
+              return res.status(500).json({ error: 'Database error' });
             }
-          }
-        }
 
-        const receiver = assignments[name];
+            if (!draw) {
+              return res.status(400).json({ error: 'Assignment not found for this participant' });
+            }
 
-        // Save this draw
-        const draw = {
-          giver: name,
-          receiver: receiver,
-          drawnAt: new Date()
-        };
+            // Mark as revealed if not already
+            if (!draw.revealed) {
+              drawsDb.update(
+                { giver: name },
+                { $set: { revealed: true, revealedAt: new Date() } },
+                {},
+                (err) => {
+                  if (err) {
+                    console.error('Failed to mark as revealed:', err);
+                  }
+                }
+              );
+            }
 
-        drawsDb.insert(draw, (err) => {
-          if (err) {
-            return res.status(500).json({ error: 'Failed to save draw' });
-          }
-
-          res.json({
-            alreadyDrawn: false,
-            receiver: receiver,
-            maxPrice: config.maxPrice
+            res.json({
+              alreadyDrawn: draw.revealed,
+              receiver: draw.receiver,
+              maxPrice: config.maxPrice
+            });
           });
-        });
+        }
       });
     });
   });
