@@ -279,19 +279,13 @@ app.get('/api/draws', (req, res) => {
   });
 });
 
-// Reset all data (admin only)
+// Reset draws only (admin only) - keeps configuration
 app.post('/api/reset', (req, res) => {
   drawsDb.remove({}, { multi: true }, (err) => {
     if (err) {
       return res.status(500).json({ error: 'Failed to reset draws' });
     }
-
-    configDb.remove({}, { multi: true }, (err) => {
-      if (err) {
-        return res.status(500).json({ error: 'Failed to reset config' });
-      }
-      res.json({ success: true });
-    });
+    res.json({ success: true, message: 'Draws reset successfully' });
   });
 });
 

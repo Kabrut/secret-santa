@@ -84,15 +84,14 @@ function AdminPanel({ config, onUpdate, apiUrl }) {
   };
 
   const handleReset = async () => {
-    if (!window.confirm('Czy na pewno chcesz zresetować wszystkie dane? To usunie wszystkie losowania!')) {
+    if (!window.confirm('Czy na pewno chcesz zresetować wszystkie losowania? Lista uczestników i kwota pozostaną bez zmian.')) {
       return;
     }
 
     try {
       await axios.post(`${apiUrl}/api/reset`);
-      setMessage('✅ Dane zostały zresetowane!');
-      setParticipants('');
-      setMaxPrice('');
+      setMessage('✅ Losowania zostały zresetowane! Użytkownicy mogą losować ponownie.');
+      fetchDraws(); // Odśwież tabelę
       setTimeout(() => {
         onUpdate();
       }, 1000);
@@ -229,15 +228,22 @@ function AdminPanel({ config, onUpdate, apiUrl }) {
             onClick={handleReset}
             className="bg-red-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-red-700 transition-colors shadow-lg"
           >
-            Reset
+            🔄 Reset Losowań
           </button>
         </div>
       </form>
 
-      <div className="mt-8 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded">
-        <p className="text-sm text-yellow-800">
-          <strong>⚠️ Uwaga:</strong> Zmiana konfiguracji usunie wszystkie dotychczasowe losowania!
-        </p>
+      <div className="mt-8 space-y-3">
+        <div className="p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+          <p className="text-sm text-yellow-800">
+            <strong>⚠️ Uwaga:</strong> Zmiana konfiguracji usunie wszystkie dotychczasowe losowania!
+          </p>
+        </div>
+        <div className="p-4 bg-blue-50 border-l-4 border-blue-400 rounded">
+          <p className="text-sm text-blue-800">
+            <strong>ℹ️ Reset Losowań:</strong> Przycisk "Reset Losowań" wyczyści tylko wyniki losowania. Lista uczestników i kwota pozostaną bez zmian.
+          </p>
+        </div>
       </div>
 
       {/* Tabela losowań */}
